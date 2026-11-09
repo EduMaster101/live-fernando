@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Overlay — Fernando Patriota</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --verde-900: #06281c;
+    --verde-700: #0b4a32;
+    --verde-500: #12924c;
+    --amarelo:   #f7c843;
+    --azul:      #0a2a6b;
+    --branco:    #ffffff;
+    --vermelho:  #e5262d;
+    /* distância da tarja até o fundo da tela (fica acima dos comentários do TikTok) */
+    --bottom: 700px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+  html.preview body { background: #0d0f12; }
+
+  /* Palco fixo em 1080x1920 (vertical), escalado para caber na janela */
+  .stage {
+    position: fixed; left: 50%; top: 50%;
+    width: 1080px; height: 1920px;
+    transform-origin: center;
+    overflow: hidden;
+  }
+
+  /* ---------- Câmera falsa e guias: só na pré-visualização ---------- */
+  .cam, .guides, .hint { display: none; }
+  html.preview .cam {
+    display: block; position: absolute; inset: 0;
+    background: linear-gradient(180deg, #2b323d 0%, #1b2029 100%);
+  }
+  .cam::before { /* cabeça */
+    content: ""; position: absolute; left: 50%; top: 330px;
+    width: 330px; height: 390px; margin-left: -165px;
+    border-radius: 50%; background: #414a58;
+  }
+  .cam::after { /* ombros */
+    content: ""; position: absolute; left: 50%; top: 760px;
+    width: 900px; height: 1400px; margin-left: -450px;
+    border-radius: 300px 300px 0 0; background: #414a58;
+  }
+  html.preview.show-guides .guides { display: block; }
+  .guides div {
+    position: absolute;
+    border: 3px dashed rgba(255,255,255,.4);
+    color: rgba(255,255,255,.75);
+    font: 600 26px/1.2 Barlow, Arial, sans-serif;
+    padding: 14px 18px;
+    background: rgba(0,0,0,.18);
+  }
+  .g-top  { left: 0; top: 0; width: 1080px; height: 230px; }
+  .g-chat { left: 0; top: 1250px; width: 780px; height: 470px; }
+  .g-bar  { left: 0; top: 1720px; width: 1080px; height: 200px; }
+  html.preview .hint {
+    display: block; position: fixed; left: 14px; bottom: 12px; z-index: 5;
+    font: 13px/1.5 "Segoe UI", Arial, sans-serif; color: #9aa3ad;
+    pointer-events: none;
+  }
+
+  /* ---------- Tarja ---------- */
+  .l3 {
+    position: absolute; left: 40px; right: 40px; bottom: var(--bottom);
+    filter: drop-shadow(0 14px 28px rgba(0,0,0,.45));
+    transition: opacity .5s ease, transform .65s cubic-bezier(.2,.8,.2,1);
+  }
+  .l3.oculta { opacity: 0; transform: translateY(80px); }
+
+  .row-top { display: flex; align-items: stretch; height: 58px; }
+
+  .live {
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 24px;
+    background: var(--verde-900); color: var(--branco);
+    font: 700 31px/1 "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+    letter-spacing: 2.5px;
+  }
+  .live i {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--vermelho);
+    animation: blink 1.4s ease-in-out infinite;
+  }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  .channel {
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 26px 0 22px;
+    background: var(--azul); color: var(--branco);
+    font: 700 31px/1 "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+    letter-spacing: 2px;
+  }
+  .mark { /* losango amarelo com círculo azul */
+    position: relative; width: 24px; height: 24px;
+    background: var(--amarelo); transform: rotate(45deg);
+  }
+  .mark::after {
+    content: ""; position: absolute; inset: 6px;
+    border-radius: 50%; background: var(--azul);
+  }
+
+  .headline {
+    position: relative; overflow: hidden;
+    padding: 26px 36px 30px 34px;
+    border-left: 14px solid var(--amarelo);
+    background: linear-gradient(100deg, var(--verde-900) 0%, var(--verde-700) 100%);
+  }
+  .kicker {
+    color: var(--amarelo);
+    font: 700 34px/1 "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+    letter-spacing: 3.5px; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .kicker:empty { display: none; }
+  .title {
+    color: var(--branco);
+    font-family: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+    font-weight: 800; font-size: 86px; line-height: 1;
+    text-transform: uppercase; letter-spacing: .5px;
+    text-wrap: balance; overflow-wrap: anywhere;
+  }
+  .kicker, .title { transition: opacity .28s ease, transform .28s ease; }
+  .headline.swap .kicker { opacity: 0; transform: translateX(-24px); }
+  .headline.swap .title  { opacity: 0; transform: translateY(26px); }
+
+  /* brilho que atravessa a tarja a cada troca de manchete */
+  .headline::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: -40%;
+    width: 35%; transform: skewX(-18deg);
+    background: linear-gradient(90deg, transparent, rgba(247,200,67,.38), transparent);
+    opacity: 0;
+  }
+  .headline.sweep::after { animation: sweep .8s ease-out; }
+  @keyframes sweep {
+    0% { left: -40%; opacity: 1; }
+    100% { left: 110%; opacity: 1; }
+  }
+
+  .stripe {
+    height: 8px;
+    background: linear-gradient(90deg,
+      var(--verde-500) 0 58%, var(--amarelo) 58% 86%, var(--azul) 86% 100%);
+  }
+
+  .ticker { display: flex; height: 72px; background: var(--amarelo); }
+  .clock {
+    display: flex; align-items: center; padding: 0 24px;
+    background: var(--azul); color: var(--branco);
+    font: 700 40px/1 "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+    letter-spacing: 1px; font-variant-numeric: tabular-nums;
+  }
+  .track-wrap { flex: 1; overflow: hidden; display: flex; align-items: center; }
+  .track {
+    display: inline-flex; white-space: nowrap;
+    animation: scroll linear infinite;
+  }
+  @keyframes scroll { to { transform: translateX(-50%); } }
+  .track span {
+    display: inline-flex; align-items: center;
+    color: var(--verde-900);
+    font: 600 34px/1 Barlow, Arial, sans-serif;
+  }
+  .track span::after {
+    content: ""; width: 12px; height: 12px; margin: 0 34px;
+    background: var(--verde-500); transform: rotate(45deg);
+  }
+
+  /* ---------- Só o logo (quando não há manchete no ar) ---------- */
+  .marca {
+    position: absolute; left: 40px; bottom: var(--bottom); width: 640px;
+    filter: drop-shadow(0 14px 28px rgba(0,0,0,.45));
+    transition: opacity .5s ease, transform .65s cubic-bezier(.2,.8,.2,1);
+  }
+  .marca.oculta { opacity: 0; transform: translateY(80px); }
+  .placa {
+    padding: 26px 34px 0;
+    background: linear-gradient(100deg, #061547 0%, var(--azul) 100%);
+  }
+  .placa img { display: block; width: 100%; height: auto; }
+  html.h .marca { left: auto; right: 40px; width: 520px; }
+  html.h .placa { padding: 20px 28px 0; }
+
+  /* ---------- Formato horizontal: tela do computador ao fundo, apresentador no canto ---------- */
+  html.h { --bottom: 40px; --esq: 660px; }
+  html.h .stage { width: 1920px; height: 1080px; }
+  html.h .l3 { left: var(--esq); right: 40px; }
+  html.h .row-top { height: 50px; }
+  html.h .live, html.h .channel { font-size: 27px; }
+  html.h .headline { padding: 20px 32px 22px 30px; border-left-width: 12px; }
+  html.h .kicker { font-size: 28px; margin-bottom: 8px; }
+  html.h .stripe { height: 6px; }
+  html.h .ticker { height: 60px; }
+  html.h .clock { font-size: 34px; padding: 0 20px; }
+  html.h .track span { font-size: 29px; }
+  html.h .guides { display: none !important; }
+  /* fundo de teste: uma "página" clara e a silhueta no canto esquerdo */
+  html.h.preview .cam { background: linear-gradient(180deg, #7d8794 0 84px, #e7eaee 84px); }
+  html.h .cam::before { left: 170px; top: 400px; width: 250px; height: 300px; margin-left: 0; background: #39414e; }
+  html.h .cam::after  { left: 0; top: 720px; width: 590px; height: 700px; margin-left: 0; border-radius: 220px 220px 0 0; background: #39414e; }
+  .pagina { display: none; }
+  html.h.preview .pagina {
+    display: block; position: absolute; left: 620px; top: 170px; width: 760px; height: 560px;
+    background:
+      linear-gradient(#59616d, #59616d) 0 0 / 100% 46px no-repeat,
+      linear-gradient(#59616d, #59616d) 0 70px / 78% 46px no-repeat,
+      repeating-linear-gradient(180deg, transparent 0 172px, #c3c9d1 172px 186px, transparent 186px 210px) ;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <div class="cam"></div>
+  <div class="pagina"></div>
+
+  <div class="guides">
+    <div class="g-top">TikTok: perfil e espectadores</div>
+    <div class="g-chat">TikTok: comentários</div>
+    <div class="g-bar">TikTok: barra de mensagem e presentes</div>
+  </div>
+
+  <div class="l3 oculta" id="l3">
+    <div class="row-top">
+      <div class="live"><i></i>AO VIVO</div>
+      <div class="channel"><span class="mark"></span><span id="canal"></span></div>
+    </div>
+    <div class="headline" id="headline">
+      <div class="kicker" id="kicker"></div>
+      <div class="title" id="title"></div>
+    </div>
+    <div class="stripe"></div>
+    <div class="ticker">
+      <div class="clock" id="clock">--:--</div>
+      <div class="track-wrap"><div class="track" id="track"></div></div>
+    </div>
+  </div>
+
+  <div class="marca oculta" id="marca">
+    <div class="placa"><img src="logo.png" alt="Fernando Patriota"></div>
+    <div class="stripe"></div>
+  </div>
+</div>
+
+<div class="hint" id="hint"></div>
+
+<script>
+/* =====================================================================
+   Endereços:
+     overlay.html                   → demonstração (manchetes de exemplo)
+     overlay.html?k=CHAVE           → ligado ao painel, com fundo de teste
+     overlay.html?k=CHAVE&live=1    → ligado ao painel, fundo transparente
+                                       (este é o que vai no programa da live)
+     &formato=h                     → horizontal 1920x1080 (tela do computador
+                                       ao fundo, apresentador no canto esquerdo);
+                                       sem isto, vertical 1080x1920
+     &bottom=40                     → altura da tarja, em px a partir do fundo
+     &esq=660                       → (horizontal) onde a tarja começa, em px a
+                                       partir da esquerda, para não tapar o apresentador
+   ===================================================================== */
+const CONFIG = {
+  canal: "FERNANDO PATRIOTA",
+  /* usados só na demonstração */
+  manchetes: [
+    { chapeu: "Tema do dia", titulo: "Reforma tributária: o que muda no seu bolso" },
+    { chapeu: "Congresso",   titulo: "Câmara vota projeto nesta semana" },
+    { chapeu: "Economia",    titulo: "Dólar, juros e inflação: entenda o cenário" },
+  ],
+  rodape: [
+    "Siga o canal e ative as notificações",
+    "Mande a sua pergunta nos comentários",
+    "Compartilhe a live com quem precisa ver",
+  ],
+};
+const RELAY = "https://ntfy.sh";
+
+const params = new URLSearchParams(location.search);
+const chave = (params.get("k") || "").replace(/[^a-zA-Z0-9_-]/g, "");
+const topico = chave ? "fp-live-" + chave : null;
+const aoVivo = params.has("live") || !!window.obsstudio;
+const root = document.documentElement;
+root.classList.toggle("preview", !aoVivo);
+root.classList.add("show-guides");
+const horizontal = /^h/i.test(params.get("formato") || "");
+root.classList.toggle("h", horizontal);
+const W = horizontal ? 1920 : 1080, H = horizontal ? 1080 : 1920;
+const TAM_MAX = horizontal ? 62 : 86, TAM_MIN = horizontal ? 42 : 54;
+if (params.get("bottom")) root.style.setProperty("--bottom", parseInt(params.get("bottom"), 10) + "px");
+if (params.get("esq")) root.style.setProperty("--esq", parseInt(params.get("esq"), 10) + "px");
+
+const $ = id => document.getElementById(id);
+const stage = $("stage"), l3 = $("l3"), marca = $("marca"), headline = $("headline"), kicker = $("kicker"), title = $("title");
+
+/* Sem manchete no ar, aparece só o logo; com manchete, a tarja completa */
+function mostrarModo(visivel, soLogo) {
+  l3.classList.toggle("oculta", !visivel || soLogo);
+  marca.classList.toggle("oculta", !visivel || !soLogo);
+}
+
+$("hint").textContent =
+  (topico ? "Pré-visualização ligada ao painel" : "Demonstração · setas → e ← alternam entre o logo e manchetes de exemplo") +
+  (horizontal ? "" : " · G mostra/esconde as áreas do TikTok");
+
+function escalar() {
+  const s = Math.min(innerWidth / W, innerHeight / H);
+  stage.style.transform = `translate(-50%, -50%) scale(${s})`;
+}
+addEventListener("resize", escalar);
+escalar();
+
+/* Diminui a letra até a manchete caber em duas linhas */
+function ajustarTitulo() {
+  let tam = TAM_MAX;
+  title.style.fontSize = tam + "px";
+  while (tam > TAM_MIN && title.offsetHeight > tam * 2 + 1) {
+    tam -= 2;
+    title.style.fontSize = tam + "px";
+  }
+}
+
+let trocaPendente = null;
+function definirManchete(chapeu, titulo, animar = true) {
+  const aplicar = () => {
+    kicker.textContent = chapeu || "";
+    title.textContent = titulo;
+    ajustarTitulo();
+  };
+  clearTimeout(trocaPendente);
+  if (!animar) { headline.classList.remove("swap"); return aplicar(); }
+  headline.classList.add("swap");
+  trocaPendente = setTimeout(() => {
+    aplicar();
+    headline.classList.remove("swap", "sweep");
+    void headline.offsetWidth;            // reinicia a animação do brilho
+    headline.classList.add("sweep");
+  }, 300);
+}
+
+function montarRodape(frases) {
+  const track = $("track");
+  track.textContent = "";
+  for (let volta = 0; volta < 2; volta++) {   // duplicado para rolar sem emenda
+    for (const f of frases) {
+      const s = document.createElement("span");
+      s.textContent = f;
+      track.appendChild(s);
+    }
+  }
+  track.style.animationDuration = Math.max(8, track.scrollWidth / 2 / 110) + "s";
+}
+
+function relogio() {
+  $("clock").textContent = new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo",
+  }).format(new Date());
+}
+
+$("canal").textContent = CONFIG.canal;
+relogio();
+setInterval(relogio, 5000);
+addEventListener("keydown", e => {
+  if (e.key.toLowerCase() === "g") root.classList.toggle("show-guides");
+});
+
+/* ---------------- Modo demonstração (sem chave) ---------------- */
+function demonstracao() {
+  const n = CONFIG.manchetes.length;
+  let atual = -1;                                   // -1 = só o logo
+  const mostrar = i => {
+    atual = (((i + 1) % (n + 1)) + (n + 1)) % (n + 1) - 1;
+    if (atual < 0) return mostrarModo(true, true);
+    const tarjaVisivel = !l3.classList.contains("oculta");
+    definirManchete(CONFIG.manchetes[atual].chapeu, CONFIG.manchetes[atual].titulo, tarjaVisivel);
+    mostrarModo(true, false);
+  };
+  montarRodape(CONFIG.rodape);
+  requestAnimationFrame(() => mostrar(-1));
+  addEventListener("keydown", e => {
+    if (e.key === "ArrowRight" || e.key === " ") mostrar(atual + 1);
+    if (e.key === "ArrowLeft") mostrar(atual - 1);
+  });
+}
+
+/* ---------------- Modo ligado ao painel ---------------- */
+/* titulo vazio = só o logo */
+let estado = { chapeu: "", titulo: "", rodape: CONFIG.rodape, visivel: true, ts: 0 };
+
+function limpar(bruto) {
+  if (!bruto || typeof bruto !== "object") return null;
+  const txt = (v, max) => (typeof v === "string" ? v : "").trim().slice(0, max);
+  const rodape = Array.isArray(bruto.rodape)
+    ? bruto.rodape.map(f => txt(f, 160)).filter(Boolean).slice(0, 12) : [];
+  return {
+    chapeu: txt(bruto.chapeu, 40),
+    titulo: txt(bruto.titulo, 140),
+    rodape,
+    visivel: bruto.visivel !== false,
+    ts: Number(bruto.ts) || 0,
+  };
+}
+
+function aplicarEstado(bruto, animar) {
+  const novo = limpar(bruto);
+  if (!novo || novo.ts <= estado.ts) return;
+  if (!novo.rodape.length) novo.rodape = estado.rodape;
+  const tarjaVisivel = estado.visivel && !!estado.titulo;
+  const mudouTexto = !!novo.titulo && (novo.titulo !== estado.titulo || novo.chapeu !== estado.chapeu);
+  const mudouRodape = JSON.stringify(novo.rodape) !== JSON.stringify(estado.rodape);
+  estado = novo;
+  if (mudouTexto) definirManchete(novo.chapeu, novo.titulo, animar && tarjaVisivel);
+  if (mudouRodape) montarRodape(novo.rodape);
+  mostrarModo(novo.visivel, !novo.titulo);
+}
+
+async function buscarUltimo() {
+  const r = await fetch(`${RELAY}/${topico}/json?poll=1&since=12h`, { cache: "no-store" });
+  if (!r.ok) throw new Error("relay " + r.status);
+  const linhas = (await r.text()).split("\n").filter(Boolean);
+  for (let i = linhas.length - 1; i >= 0; i--) {
+    try {
+      const ev = JSON.parse(linhas[i]);
+      if (ev.event === "message") return JSON.parse(ev.message);
+    } catch (e) { /* linha que não é nossa: ignora */ }
+  }
+  return null;
+}
+
+async function ligado() {
+  montarRodape(estado.rodape);
+  try { aplicarEstado(await buscarUltimo(), false); } catch (e) { /* sem rede: segue só com o logo */ }
+  mostrarModo(estado.visivel, !estado.titulo);
+
+  const es = new EventSource(`${RELAY}/${topico}/sse`);
+  es.onmessage = e => {
+    try { aplicarEstado(JSON.parse(JSON.parse(e.data).message), true); } catch (err) {}
+  };
+  /* rede de segurança: confere o último estado ao reconectar e a cada minuto */
+  const conferir = () => buscarUltimo().then(s => aplicarEstado(s, true)).catch(() => {});
+  es.onopen = conferir;
+  setInterval(conferir, 60000);
+}
+
+if (topico) ligado(); else demonstracao();
+document.fonts && document.fonts.ready.then(() => { ajustarTitulo(); montarRodape(topico ? estado.rodape : CONFIG.rodape); });
+</script>
+</body>
+</html>
