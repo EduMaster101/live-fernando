@@ -34,29 +34,45 @@
   }
 
   /* ---------- Câmera falsa e guias: só na pré-visualização ---------- */
-  .cam, .guides, .hint { display: none; }
+  /* A montagem de teste imita a cena da live: a janela do PC ao fundo
+     (página clara) e o apresentador recortado no canto esquerdo. */
+  .cam, .pagina, .rot, .guides, .hint { display: none; }
   html.preview .cam {
     display: block; position: absolute; inset: 0;
-    background: linear-gradient(180deg, #2b323d 0%, #1b2029 100%);
+    background: linear-gradient(180deg, #7d8794 0 110px, #e7eaee 110px);
   }
   .cam::before { /* cabeça */
-    content: ""; position: absolute; left: 50%; top: 330px;
-    width: 330px; height: 390px; margin-left: -165px;
-    border-radius: 50%; background: #414a58;
+    content: ""; position: absolute; left: 130px; top: 930px;
+    width: 260px; height: 310px;
+    border-radius: 50%; background: #39414e;
   }
   .cam::after { /* ombros */
-    content: ""; position: absolute; left: 50%; top: 760px;
-    width: 900px; height: 1400px; margin-left: -450px;
-    border-radius: 300px 300px 0 0; background: #414a58;
+    content: ""; position: absolute; left: 0; top: 1260px;
+    width: 520px; height: 700px;
+    border-radius: 200px 200px 0 0; background: #39414e;
   }
+  html.preview .pagina { /* texto falso da página aberta no PC */
+    display: block; position: absolute; left: 90px; top: 340px; width: 900px; height: 560px;
+    background:
+      linear-gradient(#59616d, #59616d) 0 0 / 100% 46px no-repeat,
+      linear-gradient(#59616d, #59616d) 0 70px / 78% 46px no-repeat,
+      repeating-linear-gradient(180deg, transparent 0 172px, #c3c9d1 172px 186px, transparent 186px 210px);
+  }
+  html.preview .rot {
+    display: block; position: absolute;
+    font: 700 30px/1 Barlow, Arial, sans-serif; color: #fff;
+    background: rgba(20,26,34,.85); padding: 12px 18px; border-radius: 8px;
+  }
+  .r-pc  { left: 90px; top: 256px; }
+  .r-cam { left: 50px; top: 1440px; }
   html.preview.show-guides .guides { display: block; }
   .guides div {
     position: absolute;
-    border: 3px dashed rgba(255,255,255,.4);
-    color: rgba(255,255,255,.75);
+    border: 3px dashed rgba(0,0,0,.5);
+    color: #fff;
     font: 600 26px/1.2 Barlow, Arial, sans-serif;
     padding: 14px 18px;
-    background: rgba(0,0,0,.18);
+    background: rgba(0,0,0,.26);
   }
   .g-top  { left: 0; top: 0; width: 1080px; height: 230px; }
   .g-chat { left: 0; top: 1250px; width: 780px; height: 470px; }
@@ -174,8 +190,8 @@
   }
 
   /* ---------- Só o logo (quando não há manchete no ar) ---------- */
-  .marca {
-    position: absolute; left: 40px; bottom: var(--bottom); width: 640px;
+  .marca { /* à direita, ao lado do apresentador */
+    position: absolute; right: 40px; bottom: var(--bottom); width: 500px;
     filter: drop-shadow(0 14px 28px rgba(0,0,0,.45));
     transition: opacity .5s ease, transform .65s cubic-bezier(.2,.8,.2,1);
   }
@@ -185,7 +201,7 @@
     background: linear-gradient(100deg, #061547 0%, var(--azul) 100%);
   }
   .placa img { display: block; width: 100%; height: auto; }
-  html.h .marca { left: auto; right: 40px; width: 520px; }
+  html.h .marca { width: 520px; }
   html.h .placa { padding: 20px 28px 0; }
 
   /* ---------- Formato horizontal: tela do computador ao fundo, apresentador no canto ---------- */
@@ -201,18 +217,13 @@
   html.h .clock { font-size: 34px; padding: 0 20px; }
   html.h .track span { font-size: 29px; }
   html.h .guides { display: none !important; }
-  /* fundo de teste: uma "página" clara e a silhueta no canto esquerdo */
+  /* montagem de teste no horizontal */
   html.h.preview .cam { background: linear-gradient(180deg, #7d8794 0 84px, #e7eaee 84px); }
-  html.h .cam::before { left: 170px; top: 400px; width: 250px; height: 300px; margin-left: 0; background: #39414e; }
-  html.h .cam::after  { left: 0; top: 720px; width: 590px; height: 700px; margin-left: 0; border-radius: 220px 220px 0 0; background: #39414e; }
-  .pagina { display: none; }
-  html.h.preview .pagina {
-    display: block; position: absolute; left: 620px; top: 170px; width: 760px; height: 560px;
-    background:
-      linear-gradient(#59616d, #59616d) 0 0 / 100% 46px no-repeat,
-      linear-gradient(#59616d, #59616d) 0 70px / 78% 46px no-repeat,
-      repeating-linear-gradient(180deg, transparent 0 172px, #c3c9d1 172px 186px, transparent 186px 210px) ;
-  }
+  html.h .cam::before { left: 170px; top: 400px; width: 250px; height: 300px; }
+  html.h .cam::after  { left: 0; top: 720px; width: 590px; height: 700px; border-radius: 220px 220px 0 0; }
+  html.h .pagina { left: 620px; top: 170px; width: 760px; }
+  html.h .r-pc  { left: 620px; top: 100px; }
+  html.h .r-cam { left: 110px; top: 800px; }
 </style>
 </head>
 <body>
@@ -226,6 +237,8 @@
     <div class="g-chat">TikTok: comentários</div>
     <div class="g-bar">TikTok: barra de mensagem e presentes</div>
   </div>
+  <div class="rot r-pc">Janela do PC (fundo)</div>
+  <div class="rot r-cam">Câmera do Fernando (na frente)</div>
 
   <div class="l3 oculta" id="l3">
     <div class="row-top">
