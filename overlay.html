@@ -63,6 +63,9 @@
     font: 700 30px/1 Barlow, Arial, sans-serif; color: #fff;
     background: rgba(20,26,34,.85); padding: 12px 18px; border-radius: 8px;
   }
+  /* ?fundo=arquivo.png troca a página falsa por uma captura real da janela do PC */
+  html.com-fundo .cam { background-size: cover; background-position: top center; }
+  html.com-fundo .pagina, html.com-fundo .r-pc { display: none !important; }
   .r-pc  { left: 90px; top: 256px; }
   .r-cam { left: 50px; top: 1440px; }
   html.preview.show-guides .guides { display: block; }
@@ -190,8 +193,9 @@
   }
 
   /* ---------- Só o logo (quando não há manchete no ar) ---------- */
-  .marca { /* à direita, ao lado do apresentador */
-    position: absolute; right: 40px; bottom: var(--bottom); width: 500px;
+  .marca { /* vertical: no alto à direita, logo abaixo do cabeçalho do TikTok,
+              por cima do topo da página (menu do site), sem tapar a notícia */
+    position: absolute; right: 40px; top: var(--logo-top, 250px); width: 400px;
     filter: drop-shadow(0 14px 28px rgba(0,0,0,.45));
     transition: opacity .5s ease, transform .65s cubic-bezier(.2,.8,.2,1);
   }
@@ -201,7 +205,7 @@
     background: linear-gradient(100deg, #061547 0%, var(--azul) 100%);
   }
   .placa img { display: block; width: 100%; height: auto; }
-  html.h .marca { width: 520px; }
+  html.h .marca { top: auto; bottom: var(--bottom); width: 520px; }
   html.h .placa { padding: 20px 28px 0; }
 
   /* ---------- Formato horizontal: tela do computador ao fundo, apresentador no canto ---------- */
@@ -307,6 +311,12 @@ const W = horizontal ? 1920 : 1080, H = horizontal ? 1080 : 1920;
 const TAM_MAX = horizontal ? 62 : 86, TAM_MIN = horizontal ? 42 : 54;
 if (params.get("bottom")) root.style.setProperty("--bottom", parseInt(params.get("bottom"), 10) + "px");
 if (params.get("esq")) root.style.setProperty("--esq", parseInt(params.get("esq"), 10) + "px");
+/* só na pré-visualização: imagem local (mesma pasta) no lugar da página falsa */
+const fundo = params.get("fundo") || "";
+if (!aoVivo && /^[\w.-]+\.(png|jpe?g|webp)$/i.test(fundo)) {
+  root.classList.add("com-fundo");
+  document.querySelector(".cam").style.backgroundImage = `url("${fundo}")`;
+}
 
 const $ = id => document.getElementById(id);
 const stage = $("stage"), l3 = $("l3"), marca = $("marca"), headline = $("headline"), kicker = $("kicker"), title = $("title");
